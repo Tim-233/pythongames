@@ -1,1 +1,149 @@
 
+import os
+import random
+
+
+def clear_screen():
+    """Очищення термінала."""
+    os.system("cls" if os.name == "nt" else "clear")
+
+
+def print_board(board):
+    """Виведення ігрового поля."""
+    clear_screen()
+
+    print("=== ХРЕСТИКИ-НУЛИКИ ===")
+    print("Ви граєте за X")
+    print("Комп'ютер грає за O")
+    print()
+
+    print(" " + " | ".join(board[0:3]))
+    print("---+---+---")
+    print(" " + " | ".join(board[3:6]))
+    print("---+---+---")
+    print(" " + " | ".join(board[6:9]))
+    print()
+
+
+def check_winner(board, symbol):
+    """Перевірка перемоги."""
+
+    win_combinations = [
+        (0, 1, 2),
+        (3, 4, 5),
+        (6, 7, 8),
+
+        (0, 3, 6),
+        (1, 4, 7),
+        (2, 5, 8),
+
+        (0, 4, 8),
+        (2, 4, 6)
+    ]
+
+    for combination in win_combinations:
+        if all(board[i] == symbol for i in combination):
+            return True
+
+    return False
+
+
+def player_move(board):
+    """Хід гравця."""
+
+    while True:
+        try:
+            move = int(input("Ваш хід (1-9): "))
+
+            if move < 1 or move > 9:
+                print("Введіть число від 1 до 9!")
+
+            elif board[move - 1] != " ":
+                print("Ця клітинка вже зайнята!")
+
+            else:
+                board[move - 1] = "X"
+                break
+
+        except ValueError:
+            print("Помилка! Введіть ціле число.")
+
+
+def computer_move(board):
+    """Хід комп'ютера."""
+
+    available_moves = [
+        i for i in range(9)
+        if board[i] == " "
+    ]
+
+    if available_moves:
+        move = random.choice(available_moves)
+        board[move] = "O"
+
+
+def play_game():
+    """Основна функція гри."""
+
+    board = [" "] * 9
+
+    while True:
+
+        # Хід гравця
+        print_board(board)
+
+        player_move(board)
+
+        # Перевірка перемоги гравця
+        if check_winner(board, "X"):
+            print_board(board)
+            print("Вітаємо! Ви перемогли!")
+            break
+
+        # Перевірка нічиєї
+        if " " not in board:
+            print_board(board)
+            print("Нічия!")
+            break
+
+        # Хід комп'ютера
+        computer_move(board)
+
+        # Перевірка перемоги комп'ютера
+        if check_winner(board, "O"):
+            print_board(board)
+            print("Комп'ютер переміг!")
+            break
+
+        # Перевірка нічиєї
+        if " " not in board:
+            print_board(board)
+            print("Нічия!")
+            break
+
+
+def main():
+    """Запуск гри."""
+
+    while True:
+
+        play_game()
+
+        print()
+
+        answer = input(
+            "Бажаєте зіграти ще раз? (так/ні): "
+        ).strip().lower()
+
+        if answer not in ("так", "т", "yes", "y"):
+
+            clear_screen()
+
+            print("Дякуємо за гру!")
+            break
+
+
+# Запуск програми
+if __name__ == "__main__":
+    main()
+
