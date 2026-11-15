@@ -1,1 +1,200 @@
 
+import os
+import sys
+import time
+import random
+
+speed = 0.12
+MIN_SPEED = 0.035
+
+if os.name == "nt":
+    import msvcrt
+
+    def get_key():
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+
+            if key in (b'\x00', b'\xe0'):
+                key = msvcrt.getch()
+                return {
+                    b'H': 'UP',
+                    b'P': 'DOWN',
+                    b'K': 'LEFT',
+                    b'M': 'RIGHT'
+                }.get(key)
+
+            if key.lower() == b'q':
+                return 'QUIT'
+
+        return None
+
+else:
+    import termios
+    import tty
+    import select
+
+    old_settings = termios.tcgetattr(sys.stdin)
+
+    def get_key():
+        if select.select([sys.stdin], [], [], 0)[0]:
+            key = sys.stdin.read(1)
+
+            if key == '\x1b':
+                sys.stdin.read(1)
+                arrow = sys.stdin.read(1)
+                return {
+                    'A': 'UP',
+                    'B': 'DOWN',
+                    'D': 'LEFT',
+                    'C': 'RIGHT'
+                }.get(arrow)
+
+            if key.lower() == 'q':
+                return 'QUIT'
+
+        return None
+
+
+# Розмір поля
+WIDTH = 60
+HEIGHT = 30
+
+# Створення змійки
+snake = [(30, 15), (29, 15), (28, 15)]
+
+direction = (1, 0)
+
+score = 0
+game_over = False
+
+
+def create_food():
+    while True:
+        food = (
+            random.randint(1, WIDTH - 2),
+            random.randint(1, HEIGHT - 2)
+        )
+
+        if food not in snake:
+            return food
+
+
+food = create_food()
+
+
+def draw():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+    print(f"Швидкість: {round(1 / speed, 1)} кроків/сек")
+    print("+" + "-" * (WIDTH - 2) + "+")
+    print(f"| РАХУНОК: {score:<12} ЗМІЙКА".ljust(WIDTH - 1) + "|")
+
+    for y in range(1, HEIGHT - 1):
+        line = "|"
+
+        for x in range(1, WIDTH - 1):
+            if (x, y) == snake[0]:
+                line += "@"
+            elif (x, y) in snake:
+                line += "o"
+            elif (x, y) == food:
+                line += "*"
+            else:
+                line += " "
+
+        line += "|"
+        print(line)
+
+    print("+" + "-" * (WIDTH - 2) + "+")
+    print("Керування: ↑ ↓ ← →    Q - вихід")
+
+
+def move():
+    global food, score, game_over, speed
+
+    head = (
+        snake[0][0] + direction[0],
+        snake[0][1] + direction[1]
+    )
+
+    # Перевірка зіткнення зі стінами
+    if (head[0] <= 0 or head[0] >= WIDTH - 1 or
+            head[1] <= 0 or head[1] >= HEIGHT - 1):
+        game_over = True
+        return
+
+    # Перевірка зіткнення із собою
+    if head in snake[:-1]:
+        game_over = True
+        return
+
+    snake.insert(0, head)
+
+    # Поїдання їжі
+    if head == food:
+        score += 1
+
+        if score % 2 == 0:
+            speed = max(MIN_SPEED, speed - 0.0015)
+
+        food = create_food()
+    else:
+        snake.pop()
+
+
+def main():
+    global direction, game_over
+
+    try:
+        if os.name != 'nt':
+            tty.setcbreak(sys.stdin.fileno())
+
+        directions = {
+            'UP': (0, -1),
+            'DOWN': (0, 1),
+            'LEFT': (-1, 0),
+            'RIGHT': (1, 0)
+        }
+
+        opposite = {
+            'UP': 'DOWN',
+            'DOWN': 'UP',
+            'LEFT': 'RIGHT',
+            'RIGHT': 'LEFT'
+        }
+
+        current = 'RIGHT'
+
+        while not game_over:
+            key = get_key()
+
+            if key == 'QUIT':
+                break
+
+            if key in directions and key != opposite[current]:
+                current = key
+                direction = directions[key]
+
+            move()
+            draw()
+
+            time.sleep(speed)
+
+        if game_over:
+            print("\nГРА ЗАКІНЧЕНА!")
+            print("Ваш рахунок:", score)
+            print("Дякуємо за гру!")
+
+    finally:
+        if os.name != 'nt':
+            termios.tcsetattr(
+                sys.stdin,
+                termios.TCSADRAIN,
+                old_settings
+            )
+
+
+if __name__ == "__main__":
+    main()
+
+
